@@ -8,12 +8,15 @@ from views.genres import genre_ns
 from views.movies import movie_ns
 from views.user import user_ns
 from views.auth import auth_ns
+from load_data import load_data
 
 
 def create_data(app, db):
     with app.app_context():
+        db.drop_all()
         db.create_all()
         db.session.commit()
+        load_data(db)
 
 
 def create_app(config_object):
