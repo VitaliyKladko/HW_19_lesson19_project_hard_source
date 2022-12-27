@@ -3,7 +3,8 @@ from flask_restx import Resource, Namespace
 
 from dao.model.movie import MovieSchema
 from implemented import movie_service
-from decorators import auth_required, admin_required
+from constants import MOVIES_PER_PAGE
+# from decorators import auth_required, admin_required
 
 
 movie_ns = Namespace('movies')
@@ -13,17 +14,21 @@ movie_ns = Namespace('movies')
 class MoviesView(Resource):
     # @auth_required
     def get(self):
-        director = request.args.get("director_id")
-        genre = request.args.get("genre_id")
-        year = request.args.get("year")
+        # получаем квери параметры из адр.строки
+        page = request.args.get('page')
+        status = request.args.get('status')
         filters = {
-            "director_id": director,
-            "genre_id": genre,
-            "year": year,
+            "status": status
         }
         all_movies = movie_service.get_all(filters)
-        res = MovieSchema(many=True).dump(all_movies)
-        return res, 200
+        result = MovieSchema(many=True).dump(all_movies)
+
+        # пагинация для movies
+        if page is not None:
+            page = int(page)-1
+            result = result[page*MOVIES_PER_PAGE:(page+1)*MOVIES_PER_PAGE]
+
+        return result, 200
 
     # @admin_required
     def post(self):

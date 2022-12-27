@@ -7,42 +7,52 @@ from implemented import user_service
 auth_ns = Namespace('auth')
 
 
-@auth_ns.route('/')
+@auth_ns.route('/register')
+class AuthView(Resource):
+    """
+    Передавая  email и пароль, создаем пользователя в системе, хешируя password в БД
+    """
+    def post(self):
+        req_json = request.json
+        try:
+            user = user_service.create_user(req_json)
+            return "", 201, {"location": f"/users/{user.id}"}
+        except Exception as e:
+            return {"error": f"{e}"}, 400
+
+
+@auth_ns.route('/login')
 class AuthView(Resource):
     def post(self):
         """
-        Получает логин и пароль из Body запроса в виде JSON, c помощью user сервиса делает проверку о наличии такого
-        пользовател в БД, сверяет его пароль и отдает access и refresh токены
+        Проверка email и password в БД, отдает пару access_token, refresh_token
         """
         req_json = request.json
-        login = req_json.get('username')
+        email = req_json.get('email')
         password = req_json.get('password')
 
-        # Ошибка 400 bad request говорит о том, что сервер сайта не понял запрос, который отправил пользователь
-        # по дефолту метод get у dict отдает None, если ключ не найден в dict
-        if None in [login, password]:
+        if None in [email, password]:
             abort(400)
 
-        tokens = user_service.auth_user(username=login, password=password)
+        tokens = user_service.auth_user(email, password)
 
-        # 401 Unauthorized Error («отказ в доступе») при открытии страницы сайта означает неверную авторизацию или
-        # аутентификацию пользователя
         if tokens is None:
-            abort(401)
+            return {"error": "Неверные учётные данные"}, 401
 
         return tokens, 201
 
     def put(self):
+        """
+        Отдает пару токенов после проверки валидности refresh_token. Если токен помер, то отдает код 401
+        """
         req_json = request.json
         refresh_token = req_json.get('refresh_token')
 
-        # Ошибка 400 bad request
         if refresh_token is None:
             abort(400)
 
         tokens = user_service.refresh_update_tokens(refresh_token)
 
-        # 401 Unauthorized Error
         if tokens is None:
             return {"error": "Неверные учётные данные"}, 401
 

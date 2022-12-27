@@ -14,6 +14,10 @@ class UserDAO:
     def get_by_username(self, username):
         return self.session.query(User).filter(User.username == username).first()
 
+    def get_user_by_email(self, email: str):
+        user = self.session.query(User).filter(User.email == email).first()
+        return user
+
     def create(self, user_data: dict):
         new_user = User(**user_data)
         self.session.add(new_user)
@@ -29,3 +33,8 @@ class UserDAO:
         self.session.add(user)
         self.session.commit()
 
+    def change_password(self, data, user):
+        user.password = data.get('password_2')
+
+        self.session.add(user)
+        self.session.commit()

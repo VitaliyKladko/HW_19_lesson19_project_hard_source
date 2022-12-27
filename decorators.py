@@ -5,7 +5,8 @@ from config import Config
 
 def auth_required(func):
     """
-    Декоратор запрашивает авторизацию по access_token (Authorized Required)
+    Декоратор запрашивает авторизацию по access_token (Authorized Required), если access_token верный, то ручка будет
+    доступна
     """
     def wrapper(*args, **kwargs):
         if 'Authorization' not in request.headers:

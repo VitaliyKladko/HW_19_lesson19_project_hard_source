@@ -20,6 +20,12 @@ class UserService:
     def get_all_users(self):
         return self.dao.get_all_users()
 
+    def get_get_by_email(self, email):
+        """
+        Метод сервиса обращается к DAO, передает туда email и DAO отдает объект user
+        """
+        return self.dao.get_user_by_email(email)
+
     def create_user(self, data: dict):
         # перезаписываем password в dict и добавлем сущность в БД с помощью UserDAO
         data['password'] = self.get_hash(data.get('password'))
@@ -31,9 +37,11 @@ class UserService:
     def update(self, data_json: dict):
         user_to_update = self.get_one_user(data_json['id'])
 
-        user_to_update.username = data_json['username']
-        user_to_update.password = data_json['password']
-        user_to_update.role = data_json['role']
+        if data_json.get('name') is not None:
+            user_to_update.name = data_json.get('name')
+
+        if data_json.get('surname') is not None:
+            user_to_update.surname = data_json.get('surname')
 
         self.dao.update(user_to_update)
 
@@ -67,45 +75,49 @@ class UserService:
 
         return {"access_token": access_token, "refresh_token": refresh_token}
 
-    def auth_user(self, username, password):
-        """
-        Проверяет соотвествие с данными в БД (есть ли такой пользователь, такой ли у него пароль) и если всё оk —
-        генерит пару access_token и refresh_token и отдает из в AuthView.
-        """
-        # получаем пользователя с помощью DAO по имени пользователя
-        user_auth = self.dao.get_by_username(username)
+    def auth_user(self, email, password):
+        user_by_email = self.get_get_by_email(email)
 
-        # если пользователь не найден, отдаем None
-        if user_auth is None:
+        if user_by_email is None:
             return None
 
-        # сравниваем пароль в БД с паролем при авторизации
         password_hash = self.get_hash(password)
-        if password_hash != user_auth.password:
+
+        if password_hash != user_by_email.password:
             return None
 
-        user_obj = {
-            'username': user_auth.username,
-            'role': user_auth.role
+        user_data = {
+            'email': user_by_email.email
         }
-
-        return self.get_tokens(user_obj)
+        tokens = self.get_tokens(user_data)
+        return tokens
 
     def refresh_update_tokens(self, refresh_token: str):
         """
-        Метод декодирует refresh_token, получает данные из БД по имени пользователя, создает новую пару токенов и отдает
-        их
+        Метод декодирует refresh_token, создает новую пару токенов и отдает их
         """
         try:
             user_data = jwt.decode(jwt=refresh_token, key=Config.SECRET_HERE, algorithms=[Config.ALGO])
         except Exception as e:
             return None
 
-        user = self.dao.get_by_username(user_data.get('username'))
+        return self.get_tokens(user_data)
 
-        user_obj = {
-            'username': user.username,
-            'role': user.role
-        }
+    def get_user_email_from_token(self, header):
+        token = header.split('Bearer ')[-1]
+        user_data = jwt.decode(token, Config.SECRET_HERE, algorithms=[Config.ALGO])
 
-        return self.get_tokens(user_obj)
+        user_email = user_data.get('email')
+
+        return user_email
+
+    def change_password(self, req_json):
+        """
+        Производит замену password если были переданы password_1 и password_2 и password_1 совпадает с password в БД
+        """
+        old_password_hash = self.get_hash(req_json.get('password_1'))
+        user = self.get_one_user(req_json.get('id'))
+
+        if user.password == old_password_hash:
+            req_json['password_2'] = self.get_hash(req_json['password_2'])
+            self.dao.change_password(req_json, user)

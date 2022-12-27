@@ -9,16 +9,13 @@ class MovieDAO:
         return self.session.query(Movie).get(bid)
 
     def get_all(self):
-        # А еще можно сделать так, вместо всех методов get_by_*
-        # t = self.session.query(Movie)
-        # if "director_id" in filters:
-        #     t = t.filter(Movie.director_id == filters.get("director_id"))
-        # if "genre_id" in filters:
-        #     t = t.filter(Movie.genre_id == filters.get("genre_id"))
-        # if "year" in filters:
-        #     t = t.filter(Movie.year == filters.get("year"))
-        # return t.all()
         return self.session.query(Movie).all()
+
+    def get_order_by_status(self):
+        """
+        Метод сортирует и отдает фильмы по году выпуска от самого нового до самого последнего списком объектов
+        """
+        return self.session.query(Movie).order_by(Movie.year.desc())
 
     def get_by_director_id(self, val):
         return self.session.query(Movie).filter(Movie.director_id == val).all()

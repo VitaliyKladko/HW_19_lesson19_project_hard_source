@@ -8,13 +8,13 @@ class MovieService:
     def get_one(self, bid):
         return self.dao.get_one(bid)
 
-    def get_all(self, filters):
-        if filters.get("director_id") is not None:
-            movies = self.dao.get_by_director_id(filters.get("director_id"))
-        elif filters.get("genre_id") is not None:
-            movies = self.dao.get_by_genre_id(filters.get("genre_id"))
-        elif filters.get("year") is not None:
-            movies = self.dao.get_by_year(filters.get("year"))
+    def get_all(self, filters: dict):
+        """
+        В сервис из вьюхи поступает dict, который имеет, либо не имеет status(new), происходит проверка и отдаются
+        нужные фильмы
+        """
+        if filters.get('status') is not None and filters.get('status') == 'new':
+            movies = self.dao.get_order_by_status()
         else:
             movies = self.dao.get_all()
         return movies
